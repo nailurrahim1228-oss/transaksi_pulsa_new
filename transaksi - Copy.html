@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Catatan Transaksi</title>
+
+  <!-- Library Export Excel -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
+  <style>
+    *{
+      margin:0;
+      padding:0;
+      box-sizing:border-box;
+      font-family:Arial, sans-serif;
+    }
+
+    body{
+      background:#f4f6f9;
+      padding:20px;
+    }
+
+    .container{
+      max-width:1100px;
+      margin:auto;
+      background:white;
+      padding:20px;
+      border-radius:15px;
+      box-shadow:0 5px 15px rgba(0,0,0,0.1);
+    }
+
+    h1{
+      text-align:center;
+      margin-bottom:20px;
+      color:#333;
+    }
+
+    .form-group{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+      gap:10px;
+      margin-bottom:15px;
+    }
+
+    input, select{
+      padding:10px;
+      border:1px solid #ccc;
+      border-radius:8px;
+      outline:none;
+    }
+
+    button{
+      padding:10px 15px;
+      border:none;
+      border-radius:8px;
+      cursor:pointer;
+      font-weight:bold;
+    }
+
+    .btn-add{
+      background:#28a745;
+      color:white;
+    }
+
+    .btn-download{
+      background:#007bff;
+      color:white;
+    }
+
+    .btn-delete{
+      background:#dc3545;
+      color:white;
+      padding:6px 10px;
+    }
+
+    .btn-lunas{
+      background:#17a2b8;
+      color:white;
+      padding:6px 10px;
+    }
+
+    .top-action{
+      display:flex;
+      gap:10px;
+      margin-bottom:15px;
+      flex-wrap:wrap;
+    }
+
+    table{
+      width:100%;
+      border-collapse:collapse;
+      margin-top:15px;
+    }
+
+    table th, table td{
+      border:1px solid #ddd;
+      padding:10px;
+      text-align:center;
+    }
+
+    table th{
+      background:#343a40;
+      color:white;
+    }
+
+    .status-lunas{
+      color:green;
+      font-weight:bold;
+    }
+
+    .status-bon{
+      color:orange;
+      font-weight:bold;
+    }
+
+    .filter-box{
+      margin-top:10px;
+    }
+
+    @media(max-width:768px){
+      table{
+        font-size:12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Catatan Transaksi</h1>
+
+  <div class="form-group">
+    <input type="text" id="nama" placeholder="Nama">
+    <input type="text" id="hp" placeholder="Nomor HP">
+    <input type="number" id="nominal" placeholder="Nominal">
+	<input type="date" id="tanggal">
+    
+    <select id="status">
+      <option value="Bon">Bon</option>
+      <option value="Lunas">Lunas</option>
+    </select>
+
+    <button class="btn-add" onclick="tambahData()">Tambah Data</button>
+  </div>
+
+  <div class="top-action">
+    <button class="btn-download" onclick="downloadExcel()">
+      Download Excel
+    </button>
+
+    	<input type="text" 
+  		id="filterData" 
+  		placeholder="Cari semua data..." 
+  		onkeyup="renderTable()"
+	/>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>No</th>
+        <th>Nama</th>
+        <th>Nomor HP</th>
+        <th>Nominal</th>
+	<th>Tanggal</th>
+        <th>Status</th>
+        <th>Aksi</th>
+      </tr>
+    </thead>
+
+    <tbody id="tbody"></tbody>
+  </table>
+</div>
+
+<script>
+  let dataTransaksi = JSON.parse(localStorage.getItem("dataTransaksi")) || [];
+
+  function simpanData(){
+    localStorage.setItem("dataTransaksi", JSON.stringify(dataTransaksi));
+  }
+
+  function tambahData(){
+    const nama = document.getElementById("nama").value;
+    const hp = document.getElementById("hp").value;
+    const nominal = document.getElementById("nominal").value;
+	const tanggal = document.getElementById("tanggal").value;
+    const status = document.getElementById("status").value;
+
+    if(nama === "" || hp === "" || nominal === "" || tanggal === ""){
+      alert("Semua data wajib diisi!");
+      return;
+    }
+
+    dataTransaksi.push({
+      nama,
+      hp,
+      nominal,
+	tanggal,
+      status
+    });
+
+    simpanData();
+    renderTable();
+
+    document.getElementById("nama").value = "";
+    document.getElementById("hp").value = "";
+    document.getElementById("nominal").value = "";
+	document.getElementById("tanggal").value = "";
+  }
+  function hapusData(index){
+    if(confirm("Yakin ingin menghapus data ini?")){
+      dataTransaksi.splice(index,1);
+      simpanData();
+      renderTable();
+    }
+  }
+  function ubahLunas(index){
+    dataTransaksi[index].status = "Lunas";
+    simpanData();
+    renderTable();
+  }
+
+function renderTable(){
+
+  const tbody = document.getElementById("tbody");
+  const keyword = document
+    .getElementById("filterData")
+    .value
+    .toLowerCase();
+
+  tbody.innerHTML = "";
+
+  let nomor = 1;
+
+  dataTransaksi.forEach((item,index)=>{
+
+    const gabunganData = `
+      ${item.nama}
+      ${item.hp}
+      ${item.nominal}
+      ${item.status}
+    `.toLowerCase();
+
+    if(!gabunganData.includes(keyword)){
+      return;
+    }
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${nomor++}</td>
+        <td>${item.nama}</td>
+        <td>${item.hp}</td>
+        <td>Rp ${Number(item.nominal).toLocaleString("id-ID")}</td>
+<td>${item.tanggal}</td>
+<td class="${item.status === 'Lunas' ? 'status-lunas' : 'status-bon'}">
+          ${item.status}
+        </td>
+        <td>
+          ${
+            item.status !== "Lunas"
+            ? `<button class="btn-lunas" onclick="ubahLunas(${index})">Lunas</button>`
+            : `✔`
+          }
+	<button class="btn-delete" onclick="hapusData(${index})">
+              Hapus
+            </button>
+          </td>
+      </tr>
+    `;
+  });
+}
+  function downloadExcel(){
+
+    const dataExport = dataTransaksi.map((item, index)=>({
+      No: index + 1,
+      Nama: item.nama,
+      Nomor_HP: item.hp,
+      Nominal: item.nominal,
+	Tanggal: item.tanggal,
+      Status: item.status
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataExport);
+    const workbook = XLSX.utils.book_new();
+
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Transaksi");
+
+    XLSX.writeFile(workbook, "catatan_transaksi.xlsx");
+  }
+
+  renderTable();
+</script>
+
+</body>
+</html>
